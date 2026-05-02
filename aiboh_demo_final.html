@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AI-Boh あいぼう デモ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500&family=Dela+Gothic+One&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f5f4f0;display:flex;flex-direction:column;align-items:center;padding:20px 16px 40px;min-height:100vh;font-family:'Noto Sans JP',sans-serif;gap:16px}
+
+/* APIキー設定カード */
+.api-card{width:100%;max-width:380px;background:#fff;border-radius:16px;border:1px solid #e5e3de;padding:14px 16px}
+.api-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.api-card-icon{width:28px;height:28px;border-radius:7px;background:#E1F5EE;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.api-card-title{font-size:13px;font-weight:500;color:#1a1a18}
+.api-card-sub{font-size:11px;color:#888;margin-top:1px}
+.api-input-row{display:flex;gap:8px}
+.api-input-row input{flex:1;font-size:13px;font-family:'Noto Sans JP',sans-serif;border:1px solid #e5e3de;border-radius:10px;padding:8px 12px;color:#1a1a18;background:#fff;outline:none}
+.api-input-row input:focus{border-color:#1D9E75}
+.api-input-row input::placeholder{color:#bbb}
+.api-save-btn{background:#1D9E75;color:#fff;border:none;border-radius:10px;padding:0 14px;font-size:13px;font-family:'Noto Sans JP',sans-serif;cursor:pointer;white-space:nowrap}
+.api-status{font-size:11px;margin-top:8px;padding:5px 8px;border-radius:7px;display:none}
+.api-status.ok{display:block;background:#E1F5EE;color:#085041}
+.api-status.ng{display:block;background:#FCEBEB;color:#A32D2D}
+.api-hint{font-size:11px;color:#aaa;margin-top:6px;line-height:1.5}
+.api-hint a{color:#1D9E75;text-decoration:none}
+
+/* スマホ本体 */
+.phone{width:100%;max-width:380px;background:#fff;border-radius:40px;border:1.5px solid #ddd;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.10)}
+.status-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 22px 6px;font-size:11px;color:#888}
+.screen{padding:0 18px 28px}
+
+:root{
+  --green:#1D9E75;--green-l:#E1F5EE;--green-d:#085041;--green-m:#0F6E56;
+  --border:#e5e3de;--bg2:#f8f7f4;--text:#1a1a18;--text2:#666;--text3:#aaa;
+}
+
+.app-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 0 14px}
+.logo{font-family:'Dela Gothic One',sans-serif;font-size:20px;color:var(--green)}
+.pilot-pill{font-size:10px;background:var(--green-l);color:var(--green-d);padding:3px 9px;border-radius:20px;font-weight:500}
+.slbl{font-size:10px;letter-spacing:.8px;color:var(--text3);font-weight:500;margin-bottom:8px;text-transform:uppercase}
+
+/* ニュースボタン */
+.news-btn{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;border:1px solid var(--green);border-radius:14px;background:var(--green-l);cursor:pointer;font-family:'Noto Sans JP',sans-serif;margin-bottom:12px;text-align:left;transition:all .15s}
+.news-btn:active{background:#9FE1CB}
+.nb-icon{width:32px;height:32px;border-radius:8px;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nb-title{font-size:13px;font-weight:500;color:var(--green-d)}
+.nb-sub{font-size:11px;color:var(--green-m);margin-top:2px}
+.nb-arr{margin-left:auto;font-size:16px;color:var(--green);font-weight:500}
+
+.news-panel{display:none;margin-bottom:12px}
+.news-panel.open{display:block}
+.news-item{border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:7px;cursor:pointer;transition:all .15s;background:#fff}
+.news-item:hover,.news-item.sel{border-color:var(--green);background:var(--green-l)}
+.ni-cat{font-size:10px;background:var(--green-l);color:var(--green-d);padding:2px 7px;border-radius:10px;display:inline-block;margin-bottom:5px}
+.news-item.sel .ni-cat{background:var(--green);color:#fff}
+.ni-ttl{font-size:12px;font-weight:500;color:var(--text);line-height:1.5;margin-bottom:3px}
+.ni-date{font-size:10px;color:var(--text3)}
+.ni-sum{font-size:11px;color:var(--text2);line-height:1.5;margin-top:5px;display:none}
+.news-item.sel .ni-sum{display:block}
+.bcast-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px 0;background:var(--green);color:#fff;border:none;border-radius:20px;font-size:13px;font-family:'Noto Sans JP',sans-serif;cursor:pointer;font-weight:500;margin-bottom:12px}
+.bcast-btn:disabled{opacity:.5;cursor:not-allowed}
+
+.divider{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.divider-line{flex:1;height:.5px;background:var(--border)}
+.divider-txt{font-size:10px;color:var(--text3);white-space:nowrap}
+
+.chip-scroll{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none}
+.chip-scroll::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;padding:7px 13px;border:1px solid var(--border);border-radius:20px;background:#fff;font-size:12px;font-family:'Noto Sans JP',sans-serif;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all .15s}
+.chip.sel{background:var(--green-l);border-color:var(--green);color:var(--green-d);font-weight:500}
+.gen-row{display:flex;gap:8px;margin-bottom:12px}
+.gen-row input{flex:1;font-size:13px;font-family:'Noto Sans JP',sans-serif;border:1px solid var(--border);border-radius:20px;padding:0 14px;color:var(--text);background:#fff;outline:none;height:36px}
+.gen-row input:focus{border-color:var(--green)}
+.gen-btn{background:var(--green);color:#fff;border:none;border-radius:20px;padding:0 16px;font-size:13px;font-family:'Noto Sans JP',sans-serif;cursor:pointer;height:36px;white-space:nowrap}
+.gen-btn:disabled{opacity:.5;cursor:not-allowed}
+
+.rcard{background:#fff;border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:12px}
+.rtop{background:var(--green-d);padding:13px 16px 11px;display:flex;align-items:center;gap:10px}
+.onair{background:#D85A30;color:#fff;font-size:9px;font-weight:700;padding:3px 7px;border-radius:4px;letter-spacing:.5px;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+.rstation{font-size:12px;color:#9FE1CB;font-weight:500}
+.rtpill{margin-left:auto;font-size:10px;background:rgba(255,255,255,.15);color:#E1F5EE;padding:2px 8px;border-radius:10px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wf{display:flex;align-items:center;gap:3px;padding:8px 16px;height:40px}
+.wb{flex:1;border-radius:2px;background:var(--green);transition:height .12s}
+.rbody{padding:10px 16px 12px}
+.rph{font-size:13px;color:var(--text3);text-align:center;padding:16px 0;line-height:1.6}
+.rtxt{font-size:13px;line-height:1.9;color:var(--text)}
+.prow{display:flex;align-items:center;gap:10px;padding:9px 16px 13px;border-top:1px solid var(--border)}
+.pbtn{width:40px;height:40px;border-radius:50%;background:var(--green);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pwrap{flex:1}
+.ptrack{height:4px;background:var(--bg2);border-radius:2px;margin-bottom:4px;cursor:pointer}
+.pfill{height:100%;border-radius:2px;background:var(--green);width:0%;transition:width .3s linear}
+.trow{display:flex;justify-content:space-between;font-size:10px;color:var(--text3)}
+.spdbtn{font-size:11px;font-family:'Noto Sans JP',sans-serif;color:var(--green);background:var(--green-l);border:none;border-radius:6px;padding:4px 7px;cursor:pointer;font-weight:500}
+
+.tab-bar{display:flex;border-top:1px solid var(--border);margin-top:8px}
+.tbb{flex:1;padding:10px 4px 6px;border:none;background:transparent;cursor:pointer;font-family:'Noto Sans JP',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tbb svg{width:18px;height:18px;stroke:var(--text3)}
+.tbb.act svg{stroke:var(--green)}
+.tbb span{font-size:9px;color:var(--text3)}
+.tbb.act span{color:var(--green);font-weight:500}
+.panel{display:none}.panel.act{display:block}
+
+.opwrap{border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:12px;background:#fff}
+.opwrap textarea{width:100%;border:none;background:transparent;font-size:13px;font-family:'Noto Sans JP',sans-serif;color:var(--text);resize:none;outline:none;line-height:1.7;min-height:64px}
+.opwrap textarea::placeholder{color:var(--text3)}
+.pstrow{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--border)}
+.anon{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px;cursor:pointer}
+.postbtn{background:var(--green);color:#fff;border:none;border-radius:14px;padding:6px 14px;font-size:12px;font-family:'Noto Sans JP',sans-serif;cursor:pointer}
+.opc{border:1px solid var(--border);border-radius:14px;padding:11px 13px;margin-bottom:8px;animation:fadein .3s ease;background:#fff}
+@keyframes fadein{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.ometa{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.avg{background:var(--green-l);color:var(--green-d)}.ava{background:#FAEEDA;color:#633806}.avgr{background:#F1EFE8;color:#444441}
+.onm{font-size:12px;font-weight:500;color:var(--text)}
+.otm{font-size:10px;color:var(--text3);margin-left:auto}
+.obdy{font-size:12px;line-height:1.7;color:var(--text)}
+.aiht{margin-top:7px;padding:7px 9px;background:var(--green-l);border-radius:8px;font-size:11px;color:var(--green-d);line-height:1.5}
+
+.hcard{border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px;background:#fff}
+.htitle{font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px}
+.hi{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.hl{font-size:11px;color:var(--text2);min-width:80px}
+.htr{flex:1;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden}
+.hf{height:100%;border-radius:3px;background:var(--green)}
+.hp{font-size:11px;font-weight:500;color:var(--text);min-width:28px;text-align:right}
+.ins{padding:9px 11px;border-left:2px solid var(--green);border-radius:0 8px 8px 0;background:var(--bg2);font-size:12px;color:var(--text);line-height:1.6;margin-bottom:7px}
+
+.ldots{display:inline-flex;gap:3px;align-items:center}
+.ldots span{width:5px;height:5px;border-radius:50%;background:var(--green);animation:db 1.2s infinite}
+.ldots span:nth-child(2){animation-delay:.2s}
+.ldots span:nth-child(3){animation-delay:.4s}
+@keyframes db{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+.errmsg{font-size:11px;color:#A32D2D;background:#FCEBEB;padding:8px 10px;border-radius:8px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- APIキー設定カード -->
+<div class="api-card">
+  <div class="api-card-header">
+    <div class="api-card-icon">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#1D9E75" stroke-width="1.4" stroke-linecap="round">
+        <circle cx="6" cy="7" r="3"/><path d="M11 12l-2.5-2.5"/><circle cx="6" cy="7" r="1.2" fill="#1D9E75" stroke="none"/>
+      </svg>
+    </div>
+    <div>
+      <div class="api-card-title">Claude APIキーを設定</div>
+      <div class="api-card-sub">ニュース取得・ラジオ原稿生成に必要です</div>
+    </div>
+  </div>
+  <div class="api-input-row">
+    <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off"/>
+    <button class="api-save-btn" onclick="saveApiKey()">設定</button>
+  </div>
+  <div class="api-status" id="api-status"></div>
+  <div class="api-hint">
+    キーは <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys で取得できます。<br>
+    キーはこのページ内のみで使用し、外部には送信されません。
+  </div>
+</div>
+
+<!-- スマホ本体 -->
+<div class="phone">
+  <div class="status-bar">
+    <span id="clock">9:41</span>
+    <div style="display:flex;gap:5px;align-items:center;font-size:11px">
+      <svg width="15" height="11" viewBox="0 0 14 10" fill="#888"><rect x="0" y="3" width="2" height="7" rx="1"/><rect x="3" y="2" width="2" height="8" rx="1"/><rect x="6" y="1" width="2" height="9" rx="1"/><rect x="9" y="0" width="2" height="10" rx="1"/></svg>
+      <svg width="24" height="11" viewBox="0 0 22 10" fill="none"><rect x=".5" y=".5" width="19" height="9" rx="2.5" stroke="#888" stroke-opacity=".4"/><rect x="1.5" y="1.5" width="15" height="7" rx="1.5" fill="#888"/><path d="M21 3.5v3c.8-.4 1.3-1 1.3-1.5s-.5-1.1-1.3-1.5z" fill="#888" opacity=".4"/></svg>
+    </div>
+  </div>
+
+  <div class="screen">
+    <div class="app-bar">
+      <div class="logo">AI-Boh</div>
+      <div class="pilot-pill">つくば桜地区</div>
+    </div>
+
+    <!-- ラジオパネル -->
+    <div id="panel-radio" class="panel act">
+      <div class="slbl">今日のつくばニュース</div>
+
+      <button class="news-btn" id="news-btn" onclick="toggleNews()">
+        <div class="nb-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round">
+            <rect x="1" y="3" width="14" height="10" rx="2"/><path d="M4 7h8M4 9.5h5"/>
+          </svg>
+        </div>
+        <div>
+          <div class="nb-title">NEWSつくば 最新記事を取得</div>
+          <div class="nb-sub" id="news-sub">AIがウェブ検索で今日のニュースを取得</div>
+        </div>
+        <span class="nb-arr" id="nb-arr">›</span>
+      </button>
+
+      <div class="news-panel" id="news-panel">
+        <div id="news-items"></div>
+        <button class="bcast-btn" id="bcast-btn" onclick="broadcastNews()" style="display:none">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round">
+            <circle cx="8" cy="8" r="2"/><path d="M5 8c0-1.7 1.3-3 3-3s3 1.3 3 3-1.3 3-3 3"/><path d="M2 8c0-3.3 2.7-6 6-6s6 2.7 6 6-2.7 6-6 6"/>
+          </svg>
+          この記事をラジオ放送する
+        </button>
+      </div>
+
+      <div class="divider"><div class="divider-line"></div><span class="divider-txt">または自由入力</span><div class="divider-line"></div></div>
+
+      <div class="chip-scroll">
+        <button class="chip sel" onclick="selChip(this,'sakura')">🌸 桜まつり</button>
+        <button class="chip" onclick="selChip(this,'kosodate')">👶 子育て</button>
+        <button class="chip" onclick="selChip(this,'bousai')">🏠 防災</button>
+        <button class="chip" onclick="selChip(this,'koreisha')">🤝 見守り</button>
+        <button class="chip" onclick="selChip(this,'shoten')">🏪 商店街</button>
+        <button class="chip" onclick="selChip(this,'kankyo')">♻️ 環境</button>
+      </div>
+      <div class="gen-row">
+        <input type="text" id="custom-in" placeholder="自由入力..."/>
+        <button class="gen-btn" id="gen-btn" onclick="doGenerate()">放送 ▶</button>
+      </div>
+
+      <div class="rcard">
+        <div class="rtop">
+          <span class="onair">ON AIR</span>
+          <span class="rstation">AI-Boh ラジオ</span>
+          <span class="rtpill" id="topic-pill">未選択</span>
+        </div>
+        <div class="wf" id="wf">
+          <div class="wb" id="wb0" style="height:4px"></div><div class="wb" id="wb1" style="height:4px"></div>
+          <div class="wb" id="wb2" style="height:4px"></div><div class="wb" id="wb3" style="height:4px"></div>
+          <div class="wb" id="wb4" style="height:4px"></div><div class="wb" id="wb5" style="height:4px"></div>
+          <div class="wb" id="wb6" style="height:4px"></div><div class="wb" id="wb7" style="height:4px"></div>
+          <div class="wb" id="wb8" style="height:4px"></div><div class="wb" id="wb9" style="height:4px"></div>
+          <div class="wb" id="wb10" style="height:4px"></div><div class="wb" id="wb11" style="height:4px"></div>
+          <div class="wb" id="wb12" style="height:4px"></div><div class="wb" id="wb13" style="height:4px"></div>
+          <div class="wb" id="wb14" style="height:4px"></div><div class="wb" id="wb15" style="height:4px"></div>
+        </div>
+        <div class="rbody">
+          <div id="radio-content"><div class="rph">ニュースを取得するか、トピックを選んで放送してください</div></div>
+        </div>
+        <div class="prow">
+          <button class="pbtn" onclick="togglePlay()">
+            <svg viewBox="0 0 16 16" fill="white" width="16" height="16"><polygon points="4,2 14,8 4,14" id="play-icon"/></svg>
+          </button>
+          <div class="pwrap">
+            <div class="ptrack" onclick="seekAudio(event)"><div class="pfill" id="pfill"></div></div>
+            <div class="trow"><span id="tcur">0:00</span><span id="tdur">0:00</span></div>
+          </div>
+          <button class="spdbtn" id="spdbtn" onclick="cycleSpeed()">1x</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 意見交換パネル -->
+    <div id="panel-opinions" class="panel">
+      <div class="opwrap">
+        <textarea id="op-text" placeholder="感想や意見を書いてください..." rows="3"></textarea>
+        <div class="pstrow">
+          <label class="anon"><input type="checkbox" id="anon-cb"> 匿名</label>
+          <button class="postbtn" onclick="postOp()">投稿する</button>
+        </div>
+      </div>
+      <div class="slbl">みんなの意見</div>
+      <div id="op-list">
+        <div class="opc"><div class="ometa"><div class="av avg">田</div><span class="onm">田中さん</span><span class="otm">2時間前</span></div><div class="obdy">今日のニュース、音声で聞けるのがいいですね。ながら聞きできて助かります。</div></div>
+        <div class="opc"><div class="ometa"><div class="av ava">匿</div><span class="onm">匿名の住民</span><span class="otm">4時間前</span></div><div class="obdy">子育て支援の記事、もっと詳しく知りたいです。</div><div class="aiht">✦ この投稿に共感する方が増えています。話し合いを広げてみませんか。</div></div>
+        <div class="opc"><div class="ometa"><div class="av avgr">鈴</div><span class="onm">鈴木さん</span><span class="otm">昨日</span></div><div class="obdy">防災ラジオ、分かりやすかったです。高齢の親にも聞かせました。</div></div>
+      </div>
+    </div>
+
+    <!-- 理念レポートパネル -->
+    <div id="panel-health" class="panel">
+      <div class="hcard">
+        <div class="htitle">今週のコミュニティ健全性スコア</div>
+        <div class="hi"><span class="hl">草の根参加</span><div class="htr"><div class="hf" style="width:82%"></div></div><span class="hp">82%</span></div>
+        <div class="hi"><span class="hl">意見の多様性</span><div class="htr"><div class="hf" style="width:68%"></div></div><span class="hp">68%</span></div>
+        <div class="hi"><span class="hl">中立性</span><div class="htr"><div class="hf" style="width:91%"></div></div><span class="hp">91%</span></div>
+        <div class="hi"><span class="hl">発言バランス</span><div class="htr"><div class="hf" style="width:55%"></div></div><span class="hp">55%</span></div>
+        <div class="hi"><span class="hl">安心な場</span><div class="htr"><div class="hf" style="width:77%"></div></div><span class="hp">77%</span></div>
+      </div>
+      <div class="slbl">AIからの気づき（今週）</div>
+      <div class="ins">発言が減っている方がいます。みんなが話しやすい場を守りませんか。</div>
+      <div class="ins">特定の方の発言が目立っています。他の声も聞いてみませんか。</div>
+      <div class="ins">子育て支援トピックへの関心が高まっています。多様な意見を集めてみませんか。</div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tbb act" id="tb-radio" onclick="swP('radio')">
+        <svg viewBox="0 0 20 20" fill="none" stroke-width="1.4" stroke-linecap="round"><rect x="2" y="6" width="16" height="11" rx="2"/><circle cx="14" cy="11.5" r="2.5"/><path d="M5 9h5M5 11.5h3"/><path d="M6 3l4 3M14 3l-4 3"/></svg>
+        <span>ラジオ</span>
+      </button>
+      <button class="tbb" id="tb-opinions" onclick="swP('opinions')">
+        <svg viewBox="0 0 20 20" fill="none" stroke-width="1.4"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v8a1 1 0 01-1 1h-5l-4 3v-3H4a1 1 0 01-1-1V4z"/></svg>
+        <span>意見交換</span>
+      </button>
+      <button class="tbb" id="tb-health" onclick="swP('health')">
+        <svg viewBox="0 0 20 20" fill="none" stroke-width="1.4" stroke-linecap="round"><path d="M10 4v12M4 10h12"/><circle cx="10" cy="10" r="7"/></svg>
+        <span>レポート</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+var API_KEY='';
+var selKey='sakura',isPlaying=false,speed=1,speeds=[1,1.5,2,0.75],spdIdx=0;
+var waveInt=null,typeInt=null,curText='',voices=[];
+var selNews=null,newsOpen=false;
+
+// 時刻表示
+function updateClock(){var n=new Date(),h=n.getHours(),m=n.getMinutes();document.getElementById('clock').textContent=h+':'+(m<10?'0':'')+m;}
+updateClock();setInterval(updateClock,10000);
+
+window.speechSynthesis.onvoiceschanged=function(){voices=window.speechSynthesis.getVoices()};
+setTimeout(function(){voices=window.speechSynthesis.getVoices()},600);
+
+// APIキー設定
+function saveApiKey(){
+  var v=document.getElementById('api-key-input').value.trim();
+  var st=document.getElementById('api-status');
+  if(!v){
+    st.className='api-status ng';
+    st.textContent='APIキーを入力してください';
+    return;
+  }
+  API_KEY=v;
+  st.className='api-status ok';
+  st.textContent='✓ APIキーを設定しました。ニュース取得・ラジオ生成が使えます。';
+  document.getElementById('api-key-input').value='';
+}
+
+var scripts={
+  sakura:'こんにちは、AI-Bohラジオです。今日は桜まつりについてお話しします。\n\nつくば市では毎年この季節、桜の木の下で地域のみなさんが集まる光景が見られますね。桜まつりは単なるお花見ではなく、ご近所どうしが顔を合わせ、久しぶりに話す大切な機会でもあります。\n\n皆さんはどんな桜まつりにしたいですか？ひと言でも聞かせていただけると嬉しいです。',
+  kosodate:'こんにちは、AI-Bohラジオです。今日は子育て支援についてお話しします。\n\n桜地区には小さなお子さんを持つご家庭が増えています。市内には子育てサークルや一時預かりサービスもあります。情報が届いていないだけで、支援の手はすぐそこにあることも。\n\n困っていることをぜひ意見交換の場で教えてください。',
+  bousai:'こんにちは、AI-Bohラジオです。今日は防災・安全についてお話しします。\n\n避難場所の確認、非常用持ち出し袋の中身——意外と後回しになりがちですが、今一度確認してみませんか。つくば市の避難所マップは市のウェブサイトで確認できます。\n\n「うちの地区はここが心配」という声をぜひ聞かせてください。',
+  koreisha:'こんにちは、AI-Bohラジオです。今日は高齢者の見守りについてお話しします。\n\n毎日のあいさつ、ごみ出しのときのひと声——小さなことが大きな安心につながります。地域のつながりがいざというときの命綱になることがあります。\n\n見守り活動のご意見をお聞かせください。',
+  shoten:'こんにちは、AI-Bohラジオです。今日は地元の商店街についてお話しします。\n\n地元の商店街が元気だと、地域全体が明るくなりますよね。顔なじみの店主さんとの会話——そういったものが地域の記憶をつくっています。\n\n「こんなお店があったらいいな」という声をぜひ教えてください。',
+  kankyo:'こんにちは、AI-Bohラジオです。今日は環境・ごみ問題についてお話しします。\n\nごみの分別や不法投棄など、身近な環境問題をみんなで考えてみませんか。つくば市のごみ分別ルールを守ることで、資源のリサイクルが進みます。\n\n「うちの地区はここが気になる」という声をぜひ共有してください。'
+};
+
+function swP(n){
+  ['radio','opinions','health'].forEach(function(x){document.getElementById('panel-'+x).classList.remove('act');document.getElementById('tb-'+x).classList.remove('act');});
+  document.getElementById('panel-'+n).classList.add('act');document.getElementById('tb-'+n).classList.add('act');
+}
+function selChip(el,key){
+  document.querySelectorAll('.chip').forEach(function(c){c.classList.remove('sel')});
+  el.classList.add('sel');selKey=key;document.getElementById('custom-in').value='';
+  selNews=null;document.querySelectorAll('.news-item').forEach(function(i){i.classList.remove('sel')});
+  document.getElementById('bcast-btn').style.display='none';
+}
+
+async function toggleNews(){
+  if(!API_KEY){alert('先にAPIキーを設定してください（画面上部の入力欄）');return;}
+  newsOpen=!newsOpen;
+  document.getElementById('nb-arr').textContent=newsOpen?'∨':'›';
+  var panel=document.getElementById('news-panel');
+  if(!newsOpen){panel.classList.remove('open');document.getElementById('news-sub').textContent='AIがウェブ検索で今日のニュースを取得';return;}
+  panel.classList.add('open');
+  document.getElementById('news-sub').textContent='NEWSつくばを検索中...';
+  document.getElementById('news-items').innerHTML='<div style="text-align:center;padding:16px 0"><div class="ldots"><span></span><span></span><span></span></div><div style="font-size:11px;color:#aaa;margin-top:6px">AIがニュースを検索しています...</div></div>';
+
+  try{
+    var today=new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'});
+    var res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-clients':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1500,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        system:'あなたはつくば市のニュース収集AIです。NEWSつくば（newstsukuba.jp）の最新記事を検索し、以下のJSON形式だけを返してください。説明文・マークダウン・コードブロック不要。\n{"articles":[{"title":"記事タイトル","category":"カテゴリ","summary":"2〜3文の要約","date":"公開日"}]}\n最大5件。',
+        messages:[{role:'user',content:'今日（'+today+'）のNEWSつくば（newstsukuba.jp）の最新記事を5件検索してJSONのみ返してください。'}]
+      })
+    });
+    var data=await res.json();
+    var raw='';
+    if(data.content)data.content.forEach(function(b){if(b.type==='text')raw+=b.text;});
+    var m=raw.match(/\{[\s\S]*"articles"[\s\S]*\}/);
+    if(!m)throw new Error('記事データを取得できませんでした');
+    var parsed=JSON.parse(m[0]);
+    var arts=parsed.articles||[];
+    if(arts.length===0)throw new Error('記事が見つかりませんでした');
+    renderNews(arts);
+    document.getElementById('news-sub').textContent=arts.length+'件の記事を取得しました';
+  }catch(e){
+    document.getElementById('news-items').innerHTML='<div class="errmsg">取得に失敗しました：'+e.message+'</div>';
+    document.getElementById('news-sub').textContent='取得失敗 — もう一度タップ';
+    newsOpen=false;
+  }
+}
+
+function renderNews(arts){
+  var div=document.getElementById('news-items');div.innerHTML='';
+  arts.forEach(function(a){
+    var item=document.createElement('div');item.className='news-item';
+    item.innerHTML='<span class="ni-cat">'+(a.category||'ニュース')+'</span><div class="ni-ttl">'+(a.title||'')+'</div><div class="ni-date">'+(a.date||'')+'</div><div class="ni-sum">'+(a.summary||'')+'</div>';
+    item.onclick=function(){
+      document.querySelectorAll('.news-item').forEach(function(x){x.classList.remove('sel')});
+      item.classList.add('sel');selNews=a;
+      document.getElementById('bcast-btn').style.display='flex';
+      document.querySelectorAll('.chip').forEach(function(c){c.classList.remove('sel')});
+    };
+    div.appendChild(item);
+  });
+}
+
+async function broadcastNews(){
+  if(!selNews||!API_KEY)return;
+  var btn=document.getElementById('bcast-btn');
+  btn.disabled=true;btn.textContent='ラジオ原稿を生成中...';
+  stopAudio();
+  document.getElementById('topic-pill').textContent=(selNews.title||'').substring(0,14)+'…';
+  var content=document.getElementById('radio-content');
+  content.innerHTML='<div style="text-align:center;padding:14px 0"><div class="ldots"><span></span><span></span><span></span></div><div style="font-size:11px;color:#aaa;margin-top:6px">AIがラジオ原稿を作成中...</div></div>';
+  try{
+    var res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-clients':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:600,
+        system:'あなたはAI-Boh（あいぼう）という地域コミュニティプラットフォームのAIラジオパーソナリティです。地域住民に温かく親しみやすく語りかけます。\n\nルール：\n- 220〜270字程度の語りテキストのみ\n- 敬語だが堅苦しくない（～ですね、～かもしれません）\n- 導入→本題（記事の要点を親しみやすく）→住民への問いかけの流れ\n- 記号・見出し・括弧なし',
+        messages:[{role:'user',content:'次の記事をAI-Bohラジオの語り口に変換してください。\n\nタイトル：'+selNews.title+'\n要約：'+selNews.summary}]
+      })
+    });
+    var data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    var text=data.content&&data.content[0]?data.content[0].text:'';
+    curText=text;typeAndPlay(text);
+  }catch(e){
+    content.innerHTML='<div class="errmsg">原稿生成に失敗しました：'+e.message+'</div>';
+  }
+  btn.disabled=false;
+  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="2"/><path d="M5 8c0-1.7 1.3-3 3-3s3 1.3 3 3-1.3 3-3 3"/><path d="M2 8c0-3.3 2.7-6 6-6s6 2.7 6 6-2.7 6-6 6"/></svg>この記事をラジオ放送する';
+}
+
+function doGenerate(){
+  if(!API_KEY&&document.getElementById('custom-in').value.trim()===''){
+    // APIキー不要なプリセットはそのまま使う
+  }
+  var custom=document.getElementById('custom-in').value.trim();
+  var text=custom?scripts['sakura'].replace(/桜まつり/g,custom):scripts[selKey];
+  var label=custom||document.querySelector('.chip.sel').textContent.trim();
+  stopAudio();
+  document.getElementById('topic-pill').textContent=label.substring(0,14);
+  curText=text;typeAndPlay(text);
+}
+
+function typeAndPlay(text){
+  var content=document.getElementById('radio-content');
+  content.innerHTML='<div style="text-align:center;padding:12px 0"><div class="ldots"><span></span><span></span><span></span></div></div>';
+  setTimeout(function(){
+    var d=document.createElement('div');d.className='rtxt';content.innerHTML='';content.appendChild(d);
+    var i=0;if(typeInt)clearInterval(typeInt);
+    typeInt=setInterval(function(){
+      d.innerHTML=text.substring(0,i).replace(/\n/g,'<br>');i+=3;
+      if(i>=text.length){d.innerHTML=text.replace(/\n/g,'<br>');clearInterval(typeInt);autoSpeak(text);}
+    },18);
+  },700);
+}
+function autoSpeak(text){
+  if(!window.speechSynthesis)return;stopAudio();
+  var utt=new SpeechSynthesisUtterance(text);utt.lang='ja-JP';utt.rate=speed;utt.pitch=1.05;
+  var jv=voices.find(function(v){return v.lang&&v.lang.startsWith('ja')});if(jv)utt.voice=jv;
+  var dur=Math.ceil(text.length/6/speed);
+  document.getElementById('tdur').textContent=fmt(dur);document.getElementById('pfill').style.width='0%';
+  var st=Date.now();
+  var pi=setInterval(function(){
+    if(!isPlaying){clearInterval(pi);return;}
+    var el=(Date.now()-st)/1000,pct=Math.min(100,Math.round(el/dur*100));
+    document.getElementById('pfill').style.width=pct+'%';document.getElementById('tcur').textContent=fmt(Math.round(el));
+    if(pct>=100)clearInterval(pi);
+  },200);
+  utt.onstart=function(){isPlaying=true;updBtn(true);startWave()};
+  utt.onend=utt.onerror=function(){isPlaying=false;updBtn(false);stopWave();clearInterval(pi);document.getElementById('pfill').style.width='100%'};
+  window.speechSynthesis.speak(utt);
+}
+function togglePlay(){
+  if(!curText)return;
+  if(isPlaying){window.speechSynthesis.pause();isPlaying=false;updBtn(false);stopWave();}
+  else{if(window.speechSynthesis.paused){window.speechSynthesis.resume();isPlaying=true;updBtn(true);startWave();}else{autoSpeak(curText);}}
+}
+function stopAudio(){window.speechSynthesis.cancel();isPlaying=false;updBtn(false);stopWave();document.getElementById('pfill').style.width='0%';document.getElementById('tcur').textContent='0:00';}
+function updBtn(p){
+  var icon=document.getElementById('play-icon'),pb=document.getElementById('pb2');
+  if(p){icon.setAttribute('points','4,2 8,2 8,14 4,14');if(!pb){var r=document.createElementNS('http://www.w3.org/2000/svg','rect');r.setAttribute('x','10');r.setAttribute('y','2');r.setAttribute('width','4');r.setAttribute('height','12');r.setAttribute('fill','white');r.setAttribute('id','pb2');icon.parentNode.appendChild(r);}}
+  else{icon.setAttribute('points','4,2 14,8 4,14');if(pb)pb.remove();}
+}
+function startWave(){if(waveInt)clearInterval(waveInt);waveInt=setInterval(function(){for(var i=0;i<16;i++)document.getElementById('wb'+i).style.height=Math.round(4+Math.random()*20)+'px';},120);}
+function stopWave(){if(waveInt){clearInterval(waveInt);waveInt=null;}for(var i=0;i<16;i++)document.getElementById('wb'+i).style.height='4px';}
+function cycleSpeed(){spdIdx=(spdIdx+1)%speeds.length;speed=speeds[spdIdx];document.getElementById('spdbtn').textContent=speed+'x';if(isPlaying){stopAudio();autoSpeak(curText);}}
+function seekAudio(e){if(!curText)return;document.getElementById('pfill').style.width=Math.round(e.offsetX/e.currentTarget.offsetWidth*100)+'%';}
+function fmt(s){var m=Math.floor(s/60),sc=s%60;return m+':'+(sc<10?'0':'')+sc;}
+function postOp(){
+  var text=document.getElementById('op-text').value.trim();if(!text)return;
+  var anon=document.getElementById('anon-cb').checked;
+  var card=document.createElement('div');card.className='opc';
+  card.innerHTML='<div class="ometa"><div class="av '+(anon?'avgr':'avg')+'">'+(anon?'匿':'私')+'</div><span class="onm">'+(anon?'匿名の住民':'あなた')+'</span><span class="otm">今</span></div><div class="obdy">'+text.replace(/</g,'&lt;')+'</div>';
+  document.getElementById('op-list').insertBefore(card,document.getElementById('op-list').firstChild);
+  document.getElementById('op-text').value='';
+}
+</script>
+</body>
+</html>
