@@ -9,11 +9,18 @@ export default async function handler(req, res) {
 
   const { action } = req.body || {};
 
+  // ニュース取得モード：RSSを直接取得（Claudeを使わない）
   if (action === 'fetch_news') {
     try {
-      const rssRes = await fetch('https://newstsukuba.jp/feed/', {
+      // つくば市公式RSSを試みる、失敗したらNEWSつくばへフォールバック
+      let rssRes = await fetch('https://www.city.tsukuba.lg.jp/rss.xml', {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AI-Boh/1.0)' }
       });
+      if (!rssRes.ok) {
+        rssRes = await fetch('https://newstsukuba.jp/feed/', {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AI-Boh/1.0)' }
+        });
+      }
       const xml = await rssRes.text();
 
       const items = [];
@@ -40,6 +47,7 @@ export default async function handler(req, res) {
     }
   }
 
+  // ラジオ原稿生成モード（Claude Haiku使用・低トークン）
   if (action === 'generate_radio') {
     try {
       const { title, summary, apiKey } = req.body;
