@@ -361,25 +361,14 @@ async function toggleNews(){
   document.getElementById('news-items').innerHTML='<div style="text-align:center;padding:16px 0"><div class="ldots"><span></span><span></span><span></span></div><div style="font-size:11px;color:#aaa;margin-top:6px">AIがニュースを検索しています...</div></div>';
 
   try{
-    var today=new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'});
     var res=await fetch('/api/proxy',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':API_KEY},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1500,
-        tools:[{type:'web_search_20250305',name:'web_search'}],
-        system:'あなたはつくば市のニュース収集AIです。NEWSつくば（newstsukuba.jp）の最新記事を検索し、以下のJSON形式だけを返してください。説明文・マークダウン・コードブロック不要。\n{"articles":[{"title":"記事タイトル","category":"カテゴリ","summary":"2〜3文の要約","date":"公開日"}]}\n最大5件。',
-        messages:[{role:'user',content:'今日（'+today+'）のNEWSつくば（newstsukuba.jp）の最新記事を5件検索してJSONのみ返してください。'}]
-      })
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'fetch_news'})
     });
     var data=await res.json();
-    var raw='';
-    if(data.content)data.content.forEach(function(b){if(b.type==='text')raw+=b.text;});
-    var m=raw.match(/\{[\s\S]*"articles"[\s\S]*\}/);
-    if(!m)throw new Error('記事データを取得できませんでした');
-    var parsed=JSON.parse(m[0]);
-    var arts=parsed.articles||[];
+    if(data.error)throw new Error(data.error);
+    var arts=data.articles||[];
     if(arts.length===0)throw new Error('記事が見つかりませんでした');
     renderNews(arts);
     document.getElementById('news-sub').textContent=arts.length+'件の記事を取得しました';
@@ -416,16 +405,11 @@ async function broadcastNews(){
   try{
     var res=await fetch('/api/proxy',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':API_KEY},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:600,
-        system:'あなたはAI-Boh（あいぼう）という地域コミュニティプラットフォームのAIラジオパーソナリティです。地域住民に温かく親しみやすく語りかけます。\n\nルール：\n- 220〜270字程度の語りテキストのみ\n- 敬語だが堅苦しくない（～ですね、～かもしれません）\n- 導入→本題（記事の要点を親しみやすく）→住民への問いかけの流れ\n- 記号・見出し・括弧なし',
-        messages:[{role:'user',content:'次の記事をAI-Bohラジオの語り口に変換してください。\n\nタイトル：'+selNews.title+'\n要約：'+selNews.summary}]
-      })
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'generate_radio',title:selNews.title,summary:selNews.summary,apiKey:API_KEY})
     });
     var data=await res.json();
-    if(data.error)throw new Error(data.error.message);
+    if(data.error)throw new Error(data.error);
     var text=data.content&&data.content[0]?data.content[0].text:'';
     curText=text;typeAndPlay(text);
   }catch(e){
